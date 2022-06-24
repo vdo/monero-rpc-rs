@@ -23,7 +23,7 @@ use monero::{
     Address,
 };
 use serde::{Deserialize, Deserializer, Serialize};
-use std::{collections::HashMap, num::NonZeroU64};
+use std::{collections::HashMap, net::Ipv4Addr, num::NonZeroU64};
 
 macro_rules! hash_type {
     ($name:ident, $len:expr) => {
@@ -126,7 +126,7 @@ pub struct BlockHeaderResponse {
     pub timestamp: DateTime<Utc>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) struct GenerateBlocksResponseR {
     pub height: u64,
     pub blocks: Option<Vec<HashString<BlockHash>>>,
@@ -152,6 +152,62 @@ impl From<GenerateBlocksResponseR> for GenerateBlocksResponse {
 
 /// Return type of daemon RPC `get_transactions`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct NodeInfoResponse {
+    pub adjusted_time: u64,
+    pub alt_blocks_count: u32,
+    pub block_size_limit: u64,
+    pub block_size_median: u64,
+    pub block_weight_limit: u64,
+    pub block_weight_median: u64,
+    pub bootstrap_daemon_address: String,
+    pub busy_syncing: bool,
+    pub untrusted: bool,
+    pub cumulative_difficulty: u64,
+    pub database_size: u64,
+    pub free_space: u64,
+    pub nettype: String,
+    pub top_block_hash: HashString<CryptoNoteHash>,
+    pub status: String,
+    pub tx_pool_size: u64,
+    // Many missing, will add later
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct GetConnectionsData {
+    pub connections: Vec<NodeConnection>,
+    pub untrusted: bool,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct NodeConnection {
+    pub address: String, // "89.169.0.109:45720",
+    pub address_type: u32,
+    pub avg_download: u64,
+    pub avg_upload: u64,
+    pub connection_id: HashString<Vec<u8>>, //"d5b19484f1454b... ...6b6b573fda29",
+    pub current_download: u64,
+    pub current_upload: u64,
+    pub height: u64,  // 2009045,
+    pub host: String, //    "89.169.0.xxx",
+    pub incoming: bool,
+    pub ip: Ipv4Addr,   //"89.169.0.xxx",
+    pub live_time: u64, //29,
+    pub local_ip: bool,
+    pub localhost: bool,
+    pub peer_id: HashString<Vec<u8>>, // "ea4827...2b5091",
+    pub port: String,                 // "45720",
+    pub pruning_seed: u32,            //0,
+    pub recv_count: u64,
+    pub recv_idle_time: u64,       //11,
+    pub rpc_credits_per_hash: u32, //0,
+    pub rpc_port: u32,             // 0,
+    pub send_count: u64,           // 5113,
+    pub send_idle_time: u64,       //6,
+    pub state: String,             //"normal",
+    pub support_flags: u32,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct TransactionsResponse {
     pub credits: u64,
     pub top_hash: String,
@@ -183,6 +239,36 @@ pub struct JsonTransaction {
     pub unlock_time: u64,
     // TODO: these fields are skipped for now, their content changes often from hardfork to hardfork
     // vin, vout, extra, rct_signatures, rct_sig_prunable
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct PoolTransactionsResponse {
+    pub credits: u64,
+    pub spent_key_images: Option<Vec<SpentKeyImage>>,
+    pub status: String,
+    pub top_hash: String,
+    pub transactions: Option<Vec<PoolTransaction>>,
+    pub untrusted: bool,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct PoolTransaction {
+    pub blob_size: u64, //1973,
+    pub do_not_relay: bool,
+    pub double_spend_seen: bool,
+    pub fee: u64,                            // 7900000,
+    pub id_hash: HashString<CryptoNoteHash>, //"358c216d6a7684d64475f0a813a4883f185b14e72d169370ceea1e659b4a79ff",
+    pub kept_by_block: bool,
+    pub last_failed_height: u64,                            //0,
+    pub last_failed_id_hash: HashString<CryptoNoteHash>, //"0000000000000000000000000000000000000000000000000000000000000000",
+    pub last_relayed_time: u64,                          //1656321146,
+    pub max_used_block_height: u64,                      //2654797,
+    pub max_used_block_id_hash: HashString<CryptoNoteHash>, //"f97b2a50b29b413503a1e7720cec0cd67eff35cb5b5b9a5f7d36b6a40c0c022c",
+    pub receive_time: u64,                                  // 1656321146,
+    pub relayed: bool,
+    pub tx_blob: HashString<Vec<u8>>,
+    pub tx_json: Option<String>, // needs to be parsed as JsonTransaction, but is received as a string
+    pub weight: u64,
 }
 
 /// Sub-type of [`BalanceData`]'s return type of wallet `get_balance`.
@@ -657,4 +743,10 @@ mod tests {
         };
         assert_eq!(GenerateBlocksResponse::from(gbrr), expected_gbr);
     }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SpentKeyImage {
+    pub id_hash: HashString<CryptoNoteHash>,
+    pub txs_hashes: Vec<HashString<CryptoNoteHash>>,
 }

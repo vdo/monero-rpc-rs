@@ -144,14 +144,21 @@ impl RemoteCaller {
             method,
             json_params
         );
-
-        let rsp = client
-            .post(uri)
-            .json(&json_params)
-            .send()
-            .await?
-            .json::<T>()
-            .await?;
+        let rsp: T;
+        match json_params {
+            jsonrpc_core::types::params::Params::None => {
+                rsp = client.post(uri).send().await?.json::<T>().await?;
+            }
+            _ => {
+                rsp = client
+                    .post(uri)
+                    .json(&json_params)
+                    .send()
+                    .await?
+                    .json::<T>()
+                    .await?;
+            }
+        }
 
         trace!("Received daemon RPC response: {:?}", rsp);
 
@@ -336,6 +343,18 @@ impl DaemonJsonRpcClient {
         Ok(())
     }
 
+    pub async fn get_info(&self) -> anyhow::Result<NodeInfoResponse> {
+        self.inner
+            .request("get_info", RpcParams::array(empty()))
+            .await
+    }
+
+    pub async fn get_connections(&self) -> anyhow::Result<GetConnectionsData> {
+        self.inner
+            .request("get_connections", RpcParams::array(empty()))
+            .await
+    }
+
     /// Retrieve block header information matching selected filter.
     pub async fn get_block_header(
         &self,
@@ -392,6 +411,14 @@ impl DaemonJsonRpcClient {
             .into_inner();
 
         Ok((headers.into_iter().map(From::from).collect(), untrusted))
+    }
+
+    pub async fn get_transaction_pool(&self) -> anyhow::Result<PoolTransactionsResponse> {
+        let res = self
+            .inner
+            .daemon_rpc_request::<PoolTransactionsResponse>("get_transaction_pool", RpcParams::None)
+            .await;
+        res
     }
 
     /// Enable additional functions for daemons in regtest mode.
