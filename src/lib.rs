@@ -144,21 +144,20 @@ impl RemoteCaller {
             method,
             json_params
         );
-        let rsp: T;
-        match json_params {
+        let rsp: T = match json_params {
             jsonrpc_core::types::params::Params::None => {
-                rsp = client.post(uri).send().await?.json::<T>().await?;
+                client.post(uri).send().await?.json::<T>().await?
             }
             _ => {
-                rsp = client
+                client
                     .post(uri)
                     .json(&json_params)
                     .send()
                     .await?
                     .json::<T>()
-                    .await?;
+                    .await?
             }
-        }
+        };
 
         trace!("Received daemon RPC response: {:?}", rsp);
 
@@ -414,11 +413,9 @@ impl DaemonJsonRpcClient {
     }
 
     pub async fn get_transaction_pool(&self) -> anyhow::Result<PoolTransactionsResponse> {
-        let res = self
-            .inner
+        self.inner
             .daemon_rpc_request::<PoolTransactionsResponse>("get_transaction_pool", RpcParams::None)
-            .await;
-        res
+            .await
     }
 
     /// Enable additional functions for daemons in regtest mode.
